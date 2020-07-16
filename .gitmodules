@@ -1,0 +1,3 @@
+[submodule "SCNRecorder"]
+	path = SCNRecorder
+	url = git@github.com:furysheep/SCNRecorder.git

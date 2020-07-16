@@ -6,119 +6,76 @@ The sample app's main view controller.
 */
 
 import UIKit
-import RealityKit
 import ARKit
 import Combine
 import VideoToolbox
+import SceneKit
+import SCNRecorder
 
 class ViewController: UIViewController {
 
-    @IBOutlet var arView: ARView!
+    @IBOutlet var sceneView: ARSCNView!
     @IBOutlet var messageLabel: RoundedLabel!
+    @IBOutlet weak var durationLabel: UILabel!
     private var recordStarted = false
-    private var builder: TimeLapseBuilder<PassthroughSubject<Segment, Error>>?
-    private let context = CIContext(options:nil)
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        let plane = MeshResource.generatePlane(width: 2, height: 2) // size in metres
-        let material = SimpleMaterial(color: .black, isMetallic: false)
-        let entity = ModelEntity(mesh: plane, materials: [material])
+        sceneView.rendersContinuously = true
         
-        // Place model on a horizontal plane.
-        let anchor = AnchorEntity(.camera)
-        arView.scene.anchors.append(anchor)
-               
-        anchor.transform.translation = [0, 0, -0.5]
-
-        anchor.children.append(entity)
+        // Add black plane in front of camera
+        let plane = SCNPlane(width: 10.0, height: 10.0)
+        plane.firstMaterial?.diffuse.contents = UIColor.black
+        let planeNode = SCNNode(geometry: plane)
+        sceneView.pointOfView?.addChildNode(planeNode)
+        planeNode.position = SCNVector3(0, 0, -5)
         
-        // Load face mask
-//        arView.scene.anchors.append(try! Shades.loadBlack())
-
-        guard ARFaceTrackingConfiguration.supportsFrameSemantics(.personSegmentation) else {
-            fatalError("People occlusion is not supported on this device.")
-        }
+        // It is recommended to prepare the view for recording at viewDidLoad
+        do { try sceneView.prepareForRecording() }
+        catch { print("Something went wrong during recording preparation: \(error)") }
         
-        let sessionConfig = ARFaceTrackingConfiguration()
-        sessionConfig.frameSemantics.insert(.personSegmentation)
-        arView.session.run(sessionConfig)
-        arView.session.delegate = self
-        arView.renderOptions.remove(.disableAREnvironmentLighting)
+        self.durationLabel.text = nil
     }
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        
+        let sessionConfig = ARFaceTrackingConfiguration()
+        sessionConfig.providesAudioData = true
+        sessionConfig.frameSemantics.insert(.personSegmentation)
+        sceneView.session.run(sessionConfig, options: [])
+    }
+    
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        
+        sceneView.session.pause()
     }
 
     @IBAction func onTap(_ sender: UITapGestureRecognizer) {
         if recordStarted {
             messageLabel.displayMessage("Recording ended", duration: 1.0)
-            builder?.finish()
+            
+            // Finish recording
+            sceneView.finishVideoRecording { (recording) in
+              // Update UI
+              self.durationLabel.text = nil
+            }
         } else {
             messageLabel.displayMessage("Recording started", duration: 1.0)
-            clearTempFolder()
-            
-            let size = arView.session.currentFrame!.camera.imageResolution
-            let config = FMP4WriterConfiguration(outputDirectoryPath: NSTemporaryDirectory(), width: Int(size.height), height: Int(size.width))
-
-            // These are needed to keep the asynchronous operations running.
-
-            var segmentAndIndexFileWriter: AnyCancellable?
-
-            let outputDirectoryURL = URL(fileURLWithPath: config.outputDirectoryPath, isDirectory: true)
-            print("Writing segment files to directory \(outputDirectoryURL)")
-            
-            // Set up the processing pipelines.
-            
-            // Generate a stream of Segment structures.
-            // This will be hooked up to the segment generation code after the processing chains have been set up.
-            let segmentGenerator = PassthroughSubject<Segment, Error>()
-            
-            // Generate an index file from a stream of Segments.
-            let indexFileGenerator = segmentGenerator.reduceToIndexFile(using: config)
-            
-            // Write each segment to disk.
-            let segmentFileWriter = segmentGenerator
-                .tryMap { segment in
-                    let segmentFileName = segment.fileName(forPrefix: config.segmentFileNamePrefix)
-                    let segmentFileURL = URL(fileURLWithPath: segmentFileName, isDirectory: false, relativeTo: outputDirectoryURL)
-
-                    print("writing \(segment.data.count) bytes to \(segmentFileName)")
-                    try segment.data.write(to: segmentFileURL)
+            do {
+              let videoRecording = try sceneView.startVideoRecording(fileType: .mp4, timeScale: 600, segmentation: true)
+              
+              // Observe for duration
+              videoRecording.duration.observer = { [weak self] duration in
+                DispatchQueue.main.async {
+                  let seconds = Int(duration)
+                  self?.durationLabel.text = String(format: "%02d:%02d", seconds / 60, seconds % 60)
                 }
-            
-            // Write the index file to disk.
-            let indexFileWriter = indexFileGenerator
-                .tryMap { finalIndexFile in
-                    let indexFileURL = URL(fileURLWithPath: config.indexFileName, isDirectory: false, relativeTo: outputDirectoryURL)
-                    
-                    print("writing index file to \(config.indexFileName)")
-                    try finalIndexFile.write(to: indexFileURL, atomically: false, encoding: .utf8)
-                }
-            
-            // Collect the results of segment and index file writing.
-            segmentAndIndexFileWriter = segmentFileWriter.merge(with: indexFileWriter)
-                .sink(receiveCompletion: { completion in
-                    // Evaluate the result.
-                    switch completion {
-                    case .finished:
-                        assert(self.builder != nil)
-                        assert(segmentAndIndexFileWriter != nil)
-                        print("Finished writing segment data")
-                    case .failure(let error):
-                        switch error {
-                        case let localizedError as LocalizedError:
-                            print("Error: \(localizedError.errorDescription ?? String(describing: localizedError))")
-                        default:
-                            print("Error: \(error)")
-                        }
-                    }
-                }, receiveValue: {})
-            
-            // Now that all the processing pipelines are set up, start the flow of data and wait for completion.
-            builder = generateBuilder(configuration: config, subject: segmentGenerator)
+              }
+            }
+            catch { print("Something went wrong during video-recording preparation: \(error)") }
         }
         recordStarted = !recordStarted
     }
@@ -133,37 +90,6 @@ class ViewController: UIViewController {
             }
         } catch {
             print("Could not clear temp folder: \(error)")
-        }
-    }
-}
-
-extension ViewController: ARSessionDelegate {
-    func session(_ session: ARSession, didUpdate frame: ARFrame) {
-        if recordStarted {
-            let pixelBuffer = frame.capturedImage
-
-            let width = CGFloat(CVPixelBufferGetHeight(pixelBuffer))
-            let height = CGFloat(CVPixelBufferGetWidth(pixelBuffer))
-            
-// extent problem: this doesn't work
-//            let transform = frame.displayTransform(for: .portrait, viewportSize: CGSize(width: width, height: height)).inverted()
-            let finalImage = CIImage(cvPixelBuffer: pixelBuffer).oriented(.right)
-            
-            var newPixelBuffer : CVPixelBuffer? = nil
-
-            let status = CVPixelBufferCreate(kCFAllocatorDefault, Int(width),
-                                            Int(height),
-                                            kCVPixelFormatType_32ARGB,
-                                            nil,
-                                            &newPixelBuffer)
-            if status != kCVReturnSuccess {
-                return
-            }
-            CVPixelBufferLockBaseAddress(newPixelBuffer!, CVPixelBufferLockFlags(rawValue: 0))
-            
-            context.render(finalImage, to: newPixelBuffer!)
-            CVPixelBufferUnlockBaseAddress(newPixelBuffer!, CVPixelBufferLockFlags(rawValue: 0))
-            builder?.appendPixelBuffer(newPixelBuffer!)
         }
     }
 }
