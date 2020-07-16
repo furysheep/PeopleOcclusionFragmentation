@@ -9,6 +9,7 @@ import UIKit
 import RealityKit
 import ARKit
 import Combine
+import VideoToolbox
 
 class ViewController: UIViewController {
 
@@ -57,7 +58,9 @@ class ViewController: UIViewController {
         } else {
             messageLabel.displayMessage("Recording started", duration: 1.0)
             clearTempFolder()
-            let config = FMP4WriterConfiguration(outputDirectoryPath: NSTemporaryDirectory())
+            
+            let size = arView.session.currentFrame!.camera.imageResolution
+            let config = FMP4WriterConfiguration(outputDirectoryPath: NSTemporaryDirectory(), width: Int(size.width), height: Int(size.height))
 
             // These are needed to keep the asynchronous operations running.
 

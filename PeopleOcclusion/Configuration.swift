@@ -39,17 +39,7 @@ struct FMP4WriterConfiguration {
 		AVNumberOfChannelsKey: 2,
 		AVEncoderBitRateKey: 160_000
 	]
-	let videoCompressionSettings: [String: Any] = [
-		AVVideoCodecKey: AVVideoCodecType.h264,
-		// For simplicity, assume 16:9 aspect ratio.
-		// For a production use case, modify this as necessary to match the source content.
-		AVVideoWidthKey: 1920,
-		AVVideoHeightKey: 1080,
-		AVVideoCompressionPropertiesKey: [
-			kVTCompressionPropertyKey_AverageBitRate: 6_000_000,
-			kVTCompressionPropertyKey_ProfileLevel: kVTProfileLevel_H264_Baseline_AutoLevel
-		]
-	]
+    let videoCompressionSettings: [String: Any]
 	let minimumAllowableSourceFrameDuration = CMTime(value: 1, timescale: 60) // 60fps
 	
 	// Simple settings for the intermediate format used between the source format and destination format.
@@ -60,4 +50,19 @@ struct FMP4WriterConfiguration {
 	let videoDecompressionSettings = [
 		String(kCVPixelBufferPixelFormatTypeKey): Int(kCVPixelFormatType_422YpCbCr8)
 	]
+    
+    init(outputDirectoryPath: String, width: Int, height: Int) {
+        self.outputDirectoryPath = outputDirectoryPath
+        self.videoCompressionSettings = [
+               AVVideoCodecKey: AVVideoCodecType.h264,
+               // For simplicity, assume 16:9 aspect ratio.
+               // For a production use case, modify this as necessary to match the source content.
+               AVVideoWidthKey: width,
+               AVVideoHeightKey: height,
+               AVVideoCompressionPropertiesKey: [
+                   kVTCompressionPropertyKey_AverageBitRate: 6_000_000,
+                   kVTCompressionPropertyKey_ProfileLevel: kVTProfileLevel_H264_Baseline_AutoLevel
+               ]
+           ]
+    }
 }
