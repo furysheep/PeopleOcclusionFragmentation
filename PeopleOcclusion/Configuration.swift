@@ -55,8 +55,6 @@ struct FMP4WriterConfiguration {
         self.outputDirectoryPath = outputDirectoryPath
         self.videoCompressionSettings = [
                AVVideoCodecKey: AVVideoCodecType.h264,
-               // For simplicity, assume 16:9 aspect ratio.
-               // For a production use case, modify this as necessary to match the source content.
                AVVideoWidthKey: width,
                AVVideoHeightKey: height,
                AVVideoCompressionPropertiesKey: [
