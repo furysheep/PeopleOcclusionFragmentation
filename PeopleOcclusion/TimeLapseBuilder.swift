@@ -61,7 +61,10 @@ class TimeLapseBuilder<S>: NSObject, AVAssetWriterDelegate where S: Subject, S.O
             }, receiveValue: { _ in })
     }
     
-    func start() {
+    public func start() {
+        // reset buffers
+        pixelBuffers.removeAll()
+        
         let sourceBufferAttributes = [
             (kCVPixelBufferPixelFormatTypeKey as String): Int(kCVPixelFormatType_32ARGB),
             (kCVPixelBufferWidthKey as String): Float(videoWidth),
@@ -126,26 +129,7 @@ class TimeLapseBuilder<S>: NSObject, AVAssetWriterDelegate where S: Subject, S.O
         started = false
     }
     
-    // Call this when done transferring video data.
-    // Here you evaluate the final status of the AVAssetReader and AVAssetWriter, then mark the Subject as finished.
-    private func finish(completion: Subscribers.Completion<Error>) {
-        switch completion {
-        case .failure:
-            videoWriter.cancelWriting()
-            subject.send(completion: completion)
-        default:
-            videoWriter.finishWriting {
-                if self.videoWriter.status == .completed {
-                    self.subject.send(completion: .finished)
-                } else {
-                    assert(self.videoWriter.status == .failed)
-                    self.subject.send(completion: .failure(self.videoWriter.error!))
-                }
-            }
-        }
-    }
-    
-    func appendPixelBuffer(_ pixelBuffer: CVPixelBuffer) {
+    public func appendPixelBuffer(_ pixelBuffer: CVPixelBuffer) {
         pixelBuffers.append(pixelBuffer)
     }
     
@@ -169,5 +153,25 @@ class TimeLapseBuilder<S>: NSObject, AVAssetWriterDelegate where S: Subject, S.O
         let segment = Segment(index: segmentIndex, data: segmentData, isInitializationSegment: isInitializationSegment, report: segmentReport)
         subject.send(segment)
         segmentIndex += 1
+    }
+    
+    // MARK: - Private
+    // Call this when done transferring video data.
+    // Here you evaluate the final status of the AVAssetReader and AVAssetWriter, then mark the Subject as finished.
+    private func finish(completion: Subscribers.Completion<Error>) {
+        switch completion {
+        case .failure:
+            videoWriter.cancelWriting()
+            subject.send(completion: completion)
+        default:
+            videoWriter.finishWriting {
+                if self.videoWriter.status == .completed {
+                    self.subject.send(completion: .finished)
+                } else {
+                    assert(self.videoWriter.status == .failed)
+                    self.subject.send(completion: .failure(self.videoWriter.error!))
+                }
+            }
+        }
     }
 }

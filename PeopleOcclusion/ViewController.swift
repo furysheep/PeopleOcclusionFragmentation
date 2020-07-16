@@ -17,6 +17,7 @@ class ViewController: UIViewController {
     @IBOutlet var messageLabel: RoundedLabel!
     private var recordStarted = false
     private var builder: TimeLapseBuilder<PassthroughSubject<Segment, Error>>?
+    private let context = CIContext(options:nil)
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -60,7 +61,7 @@ class ViewController: UIViewController {
             clearTempFolder()
             
             let size = arView.session.currentFrame!.camera.imageResolution
-            let config = FMP4WriterConfiguration(outputDirectoryPath: NSTemporaryDirectory(), width: Int(size.width), height: Int(size.height))
+            let config = FMP4WriterConfiguration(outputDirectoryPath: NSTemporaryDirectory(), width: Int(size.height), height: Int(size.width))
 
             // These are needed to keep the asynchronous operations running.
 
@@ -139,7 +140,30 @@ class ViewController: UIViewController {
 extension ViewController: ARSessionDelegate {
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
         if recordStarted {
-            builder?.appendPixelBuffer(frame.capturedImage)
+            let pixelBuffer = frame.capturedImage
+
+            let width = CGFloat(CVPixelBufferGetHeight(pixelBuffer))
+            let height = CGFloat(CVPixelBufferGetWidth(pixelBuffer))
+            
+// extent problem: this doesn't work
+//            let transform = frame.displayTransform(for: .portrait, viewportSize: CGSize(width: width, height: height)).inverted()
+            let finalImage = CIImage(cvPixelBuffer: pixelBuffer).oriented(.right)
+            
+            var newPixelBuffer : CVPixelBuffer? = nil
+
+            let status = CVPixelBufferCreate(kCFAllocatorDefault, Int(width),
+                                            Int(height),
+                                            kCVPixelFormatType_32ARGB,
+                                            nil,
+                                            &newPixelBuffer)
+            if status != kCVReturnSuccess {
+                return
+            }
+            CVPixelBufferLockBaseAddress(newPixelBuffer!, CVPixelBufferLockFlags(rawValue: 0))
+            
+            context.render(finalImage, to: newPixelBuffer!)
+            CVPixelBufferUnlockBaseAddress(newPixelBuffer!, CVPixelBufferLockFlags(rawValue: 0))
+            builder?.appendPixelBuffer(newPixelBuffer!)
         }
     }
 }
