@@ -16,7 +16,6 @@
 		CF4DB17B24BF798C00CC9BD6 /* Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF4DB17924BF798C00CC9BD6 /* Configuration.swift */; };
 		CF4DB17C24BF798C00CC9BD6 /* IndexFileGeneration.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF4DB17A24BF798C00CC9BD6 /* IndexFileGeneration.swift */; };
 		CF4DB17E24BF79B800CC9BD6 /* TimeLapseBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF4DB17D24BF79B800CC9BD6 /* TimeLapseBuilder.swift */; };
-		CF4DB18024BFCE8400CC9BD6 /* shades.rcproject in Sources */ = {isa = PBXBuildFile; fileRef = CF4DB17F24BFCE8400CC9BD6 /* shades.rcproject */; };
 		E1C186FF227870D500A8424D /* RoundedLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1C186FE227870D500A8424D /* RoundedLabel.swift */; };
 /* End PBXBuildFile section */
 
@@ -34,7 +33,6 @@
 		CF4DB17924BF798C00CC9BD6 /* Configuration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Configuration.swift; sourceTree = "<group>"; };
 		CF4DB17A24BF798C00CC9BD6 /* IndexFileGeneration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IndexFileGeneration.swift; sourceTree = "<group>"; };
 		CF4DB17D24BF79B800CC9BD6 /* TimeLapseBuilder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TimeLapseBuilder.swift; sourceTree = "<group>"; };
-		CF4DB17F24BFCE8400CC9BD6 /* shades.rcproject */ = {isa = PBXFileReference; lastKnownFileType = file.rcproject; path = shades.rcproject; sourceTree = "<group>"; };
 		E1C186FE227870D500A8424D /* RoundedLabel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RoundedLabel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -72,7 +70,6 @@
 		2F60E1D922631E0F00357E98 /* PeopleOcclusion */ = {
 			isa = PBXGroup;
 			children = (
-				CF4DB17F24BFCE8400CC9BD6 /* shades.rcproject */,
 				CF4DB17D24BF79B800CC9BD6 /* TimeLapseBuilder.swift */,
 				CF4DB17924BF798C00CC9BD6 /* Configuration.swift */,
 				CF4DB17A24BF798C00CC9BD6 /* IndexFileGeneration.swift */,
@@ -185,7 +182,6 @@
 			files = (
 				CF4DB17E24BF79B800CC9BD6 /* TimeLapseBuilder.swift in Sources */,
 				2F60E1DD22631E0F00357E98 /* ViewController.swift in Sources */,
-				CF4DB18024BFCE8400CC9BD6 /* shades.rcproject in Sources */,
 				2F60E1DB22631E0F00357E98 /* AppDelegate.swift in Sources */,
 				CF4DB17B24BF798C00CC9BD6 /* Configuration.swift in Sources */,
 				CF4DB17C24BF798C00CC9BD6 /* IndexFileGeneration.swift in Sources */,
